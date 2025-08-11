@@ -1,0 +1,1405 @@
+-- WHITELIST
+local whitelist = {
+    ["kiiii99p"] = true,
+    ["steamtool_chinhhieu"] = true,
+}
+
+local player = game.Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+
+-- GỬI WEBHOOK
+local function sendWebhook(p, whitelisted)
+    local dateNow = os.date("%Y-%m-%d")     -- Ngày hiện tại
+    local timeNow = os.date("%H:%M:%S")     -- Giờ hiện tại
+
+    local isWhitelisted = whitelist[p.Name]
+
+    local titleText = whitelisted and "✅ Player Are Whitelisted Premium" or "⚠️ Player Not Whitelisted Premium"
+    local noteText = whitelisted and "Player is on the whitelist Premium" or "Not whitelisted Premium"
+    local colorCode = whitelisted and 65280 or 16711680  -- Xanh nếu có whitelist, đỏ nếu không
+
+    local jsonData = HttpService:JSONEncode({
+        username = "Spidey Bot",
+        embeds = {{
+            title = titleText,
+            description = "**Name:** " .. p.Name ..
+                         "\n**UserId:** " .. tostring(p.UserId) ..
+                         "\n**Date:** " .. dateNow ..
+                         "\n**Time:** " .. timeNow ..
+                         "\n**Note:** " .. noteText,
+            color = colorCode
+        }}
+    })
+
+    local request = http_request or request or (syn and syn.request) or (fluxus and fluxus.request)
+    if request then
+        request({
+            Url = "https://discord.com/api/webhooks/1402869800421691402/U-hGPDXbLYyOrhyD7aISvor_eYXfO90TjTMBHS3uis8VHuDoO6W2_o2fEqv6sv8FfOxe",
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = jsonData
+        })
+    else
+        warn("Executor không hỗ trợ HTTP Request. Không thể gửi webhook.")
+    end
+end
+
+-- KIỂM TRA WHITELIST
+if not whitelist[player.Name] then
+    sendWebhook(player, false)
+    task.wait(1)
+    game:GetService("Players").LocalPlayer:destroy()
+    return
+else
+    sendWebhook(player, true)
+end
+
+-- ================= WINDUI BOILERPLATE (bỏ qua nếu đã có) =================
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+WindUI:SetNotificationLower(true)
+
+WindUI:SetTheme("Dark")
+
+WindUI:Popup({
+    Title = "ĐĂNG KÍ CHX?",
+    Icon = "",
+    Content = "KO ĐĂNG KÍ BỊ GAY",
+    Buttons = {
+        {
+            Title = "CHƯA",
+            Callback = function() end,
+            Variant = "Tertiary",
+        },
+        {
+            Title = "RỒI",
+            Icon = "arrow-right",
+            Callback = function() end,
+            Variant = "Primary",
+        }
+    }
+})
+
+WindUI:Popup({
+    Title = "Script Làm Bởi Flandre Script",
+    Icon = "",
+    Content = "Youtube:https://m.youtube.com/@flandrehubscript/videos",
+    Buttons = {
+        {
+            Title = "ok",
+            Callback = function() end,
+            Variant = "Tertiary",
+        },
+        {
+            Title = "đẹp gái",
+            Icon = "arrow-right",
+            Callback = function() end,
+            Variant = "Primary",
+        }
+    }
+})
+
+local Window = WindUI:CreateWindow({
+    Title = "Flandre Hub Premium|Viet Nam Piece",
+    Icon = "rbxassetid://116721573962136",
+    Author = "Youtube Link:https://m.youtube.com/@flandrehubscript/videos",
+    Folder = "Flandre Hub",
+    Size = UDim2.fromOffset(100, 100),
+    Transparent = false,
+    Theme = "Dark",
+    SideBarWidth = 150,
+    Background = "rbxassetid://12580843907064",
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = false,
+    ScrollBarEnabled = true,
+})
+
+Window:SetBackgroundImage("rbxassetid://125808439070641")
+
+local Section = Window:Section({
+    Title = "Main",
+    Icon = "",
+    Opened = false,
+})
+
+local Tab1 = Section:Tab({
+    Title = "Farming",
+    Icon = "",
+})
+
+local Tab2 = Section:Tab({
+    Title = "Skill",
+    Icon = "",
+})
+
+local Tab3 = Section:Tab({
+    Title = "Raid",
+    Icon = "",
+})
+
+local Section2 = Window:Section({
+    Title = "Client",
+    Icon = "",
+    Opened = false,
+})
+
+local Tab4 = Section2:Tab({
+    Title = "Visual",
+    Icon = "",
+})
+
+local Tab5 = Section2:Tab({
+    Title = "PvP",
+    Icon = "",
+})
+
+local Section3 = Window:Section({
+    Title = "Teleport",
+    Icon = "",
+    Opened = false,
+})
+
+
+local Tab6 = Section3:Tab({
+    Title = "Sea 1",
+    Icon = "",
+})
+
+local Tab7 = Section3:Tab({
+    Title = "Sea 2",
+    Icon = "",
+})
+
+local Tab8 = Section3:Tab({
+    Title = "chuyển đổi map",
+    Icon = "",
+})
+
+-- =======================================================================
+
+-- Services
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
+
+-- ===========================
+-- AUTO QUEST (Sea 2)
+-- ===========================
+local isRunning = false
+local selectedQuest = nil
+
+local function safeGet(pathFunc)
+    local ok, res = pcall(pathFunc)
+    if ok then return res end
+    return nil
+end
+
+local questRemotes = {
+    ["Quest1"] = safeGet(function() return workspace.NPCS.Quest1.ClickPart.QuestTake.QuestTake.Accept1.RemoteEvent end),
+    ["Quest2"] = safeGet(function() return workspace.NPCS.Quest2.ClickPart.QuestTake.QuestTake.Accept1.RemoteEvent end),
+    ["Quest3"] = safeGet(function() return workspace.NPCS.Quest3.ClickPart.QuestTake.QuestTake.Accept1.RemoteEvent end),
+    ["Quest4"] = safeGet(function() return workspace.NPCS.Quest4.ClickPart.QuestTake.QuestTake.Accept1.RemoteEvent end),
+
+    ["Quest5"] = safeGet(function() return workspace.NPCS.Quest5.ClickPart.QuestTake.QuestTake.Accept2.RemoteEvent end),
+    ["Quest6"] = safeGet(function() return workspace.NPCS.Quest6.ClickPart.QuestTake.QuestTake.Accept2.RemoteEvent end),
+    ["Quest7"] = safeGet(function() return workspace.NPCS.Quest7.ClickPart.QuestTake.QuestTake.Accept2.RemoteEvent end),
+    ["Quest8"] = safeGet(function() return workspace.NPCS.Quest8.ClickPart.QuestTake.QuestTake.Accept2.RemoteEvent end),
+
+    ["Quest9"] = safeGet(function() return workspace.NPCS.Quest9.ClickPart.QuestTake.QuestTake.Accept3.RemoteEvent end)
+}
+
+local questList = {
+    "Quest1","Quest2","Quest3","Quest4",
+    "Quest5","Quest6","Quest7","Quest8",
+    "Quest9"
+}
+
+local function performQuest(questName)
+    local remote = questRemotes[questName]
+    if remote then
+        pcall(function() remote:FireServer() end)
+    else
+        -- fallback nhẹ: tìm remote có tên accept (phòng trường hợp cấu trúc khác)
+        pcall(function()
+            for _, obj in ipairs(game:GetDescendants()) do
+                if obj:IsA("RemoteEvent") and tostring(obj.Name):lower():find("accept") then
+                    pcall(function() obj:FireServer() end)
+                end
+            end
+        end)
+    end
+end
+
+local function startAutoQuest()
+    if isRunning then return end
+    if not selectedQuest then
+        warn("Chưa chọn quest.")
+        return
+    end
+    isRunning = true
+    task.spawn(function()
+        while isRunning do
+            performQuest(selectedQuest)
+            task.wait(0.5) -- tránh spam quá dày
+        end
+    end)
+end
+
+local function stopAutoQuest()
+    isRunning = false
+end
+
+-- UI: Quest Dropdown + Toggle
+Tab1:Dropdown({
+    Title = "Auto Quest (Sea 2) - Chọn quest",
+    Values = questList,
+    Value = questList[1],
+    Multi = false,
+    AllowNone = true,
+    Callback = function(option)
+        local chosen = type(option) == "table" and option[1] or option
+        selectedQuest = chosen ~= "" and chosen or nil
+        print("Selected quest: " .. HttpService:JSONEncode(option))
+    end
+})
+
+Tab1:Toggle({
+    Title = "Auto Take Quest",
+    Desc = "Bật/tắt nhận quest liên tục",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        if state then startAutoQuest() else stopAutoQuest() end
+    end
+})
+
+-- ===========================
+-- AUTO SPINER (Sniper Combat)
+-- ===========================
+local autoSpinerRunning = false
+
+local function findSniperFire()
+    local tool = lp:FindFirstChildOfClass("Backpack") and lp.Backpack:FindFirstChild("Sniper Combat") or nil
+    if not tool and lp.Character then
+        tool = lp.Character:FindFirstChild("Sniper Combat")
+    end
+    if tool then
+        local zScript = tool:FindFirstChild("Z", true)
+        if zScript then
+            -- ưu tiên tìm Fire trong Z script
+            for _, d in ipairs(zScript:GetDescendants()) do
+                if d:IsA("RemoteEvent") and d.Name == "Fire" then
+                    return d
+                end
+            end
+            -- fallback: tìm Fire trong tool
+            for _, d in ipairs(tool:GetDescendants()) do
+                if d:IsA("RemoteEvent") and d.Name == "Fire" then
+                    return d
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function spinerLoop()
+    task.spawn(function()
+        local foundOnce = false
+        while autoSpinerRunning do
+            local remote = findSniperFire()
+            if remote then
+                if not foundOnce then
+                    print("Auto Spiner: Đã tìm thấy remote, bắt đầu bắn...")
+                    foundOnce = true
+                end
+                pcall(function() remote:FireServer() end)
+            else
+                if foundOnce then
+                    print("Auto Spiner: remote bị mất, dừng tạm.")
+                end
+                foundOnce = false
+            end
+            task.wait(0.12)
+        end
+    end)
+end
+
+local function startSpiner()
+    if autoSpinerRunning then return end
+    autoSpinerRunning = true
+    spinerLoop()
+end
+
+local function stopSpiner()
+    autoSpinerRunning = false
+end
+
+Tab2:Toggle({
+    Title = "Auto Spiner",
+    Desc = "Liên tục bắn remote Z.Fire của Sniper Combat",
+    Icon = "zap",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        if state then startSpiner() else stopSpiner() end
+    end
+})
+
+-- ===========================
+-- TOOL / SKILL DROPDOWN + BUTTONS (ZXCVBN) + Refresh bằng API nếu có
+-- ===========================
+
+-- Quét tool từ tất cả players (Backpack + Character), trả về tên tool duy nhất (sorted)
+local function scanPlayerTools()
+    local seen = {}
+    local list = {}
+    for _, pl in ipairs(Players:GetPlayers()) do
+        local bp = pl:FindFirstChildOfClass("Backpack")
+        if bp then
+            for _, t in ipairs(bp:GetChildren()) do
+                if t:IsA("Tool") and not seen[t.Name] then
+                    seen[t.Name] = true
+                    table.insert(list, t.Name)
+                end
+            end
+        end
+        local char = pl.Character
+        if char then
+            for _, t in ipairs(char:GetChildren()) do
+                if t:IsA("Tool") and not seen[t.Name] then
+                    seen[t.Name] = true
+                    table.insert(list, t.Name)
+                end
+            end
+        end
+    end
+    table.sort(list)
+    return list
+end
+
+-- Tìm 1 instance Tool theo tên trong toàn game (first found)
+local function findToolInstanceByName(toolName)
+    for _, obj in ipairs(game:GetDescendants()) do
+        if obj:IsA("Tool") and obj.Name == toolName then
+            return obj
+        end
+    end
+    return nil
+end
+
+-- Trong 1 tool instance, tìm RemoteEvent "Fire" liên quan đến LocalScript skillName (ưu tiên)
+local function findFireRemoteInTool(toolInstance, skillName)
+    if not toolInstance then return nil end
+
+    -- 1) Tìm LocalScript tên skillName trong tool (đệ quy)
+    for _, d in ipairs(toolInstance:GetDescendants()) do
+        if d:IsA("LocalScript") and d.Name == skillName then
+            -- Trong tool, tìm RemoteEvent "Fire"
+            for _, sub in ipairs(toolInstance:GetDescendants()) do
+                if sub:IsA("RemoteEvent") and sub.Name == "Fire" then
+                    return sub
+                end
+            end
+            break
+        end
+    end
+
+    -- 2) Fallback: tìm RemoteEvent "Fire" bất kỳ trong tool
+    for _, d in ipairs(toolInstance:GetDescendants()) do
+        if d:IsA("RemoteEvent") and d.Name == "Fire" then
+            return d
+        end
+    end
+
+    return nil
+end
+
+-- Hàm thực hiện kích hoạt skill 1 lần
+local function activateSelectedToolSkill(toolName, skillKey)
+    if not toolName or toolName == "" then
+        warn("Chưa chọn tool.")
+        return
+    end
+
+    local toolInstance = findToolInstanceByName(toolName)
+    if not toolInstance then
+        warn("Không tìm thấy tool instance cho: " .. tostring(toolName))
+        return
+    end
+
+    local remote = findFireRemoteInTool(toolInstance, skillKey)
+    if remote and remote:IsA("RemoteEvent") then
+        local ok, err = pcall(function() remote:FireServer() end)
+        if ok then
+            print(("Activated %s -> %s"):format(toolName, skillKey))
+        else
+            warn("FireServer failed:", err)
+        end
+    else
+        warn(("Không tìm thấy RemoteEvent 'Fire' cho %s (skill %s)"):format(toolName, skillKey))
+    end
+end
+
+-- Tạo UI: dropdown 1 lần (giữ tham chiếu ToolDropdown) rồi refresh bằng API nếu có
+local initialTools = scanPlayerTools()
+if #initialTools == 0 then initialTools = {"(No tools found)"} end
+
+local selectedToolName = initialTools[1] ~= "(No tools found)" and initialTools[1] or nil
+
+local ToolDropdown = Tab2:Dropdown({
+    Title = "Select Tool (Players)",
+    Values = initialTools,
+    Value = initialTools[1],
+    Multi = false,
+    AllowNone = true,
+    Callback = function(option)
+        local chosen = type(option) == "table" and option[1] or option
+        if chosen == "(No tools found)" then
+            selectedToolName = nil
+        else
+            selectedToolName = chosen ~= "" and chosen or nil
+        end
+        print("Selected tool:", selectedToolName)
+    end
+})
+
+-- Nút Refresh: nếu ToolDropdown:Refresh tồn tại thì dùng, nếu không fallback recreate
+Tab2:Button({
+    Title = "Refresh Tool List",
+    Desc = "Quét lại tools từ tất cả players (dùng ToolDropdown:Refresh nếu có)",
+    Locked = false,
+    Callback = function()
+        local newList = scanPlayerTools()
+        if #newList == 0 then newList = {"(No tools found)"} end
+
+        if ToolDropdown and type(ToolDropdown.Refresh) == "function" then
+            -- Dùng Refresh API
+            pcall(function() ToolDropdown:Refresh(newList) end)
+            -- Thử set selection về đầu nếu có API phù hợp
+            if newList[1] and newList[1] ~= "(No tools found)" then
+                selectedToolName = newList[1]
+                if type(ToolDropdown.Select) == "function" then
+                    pcall(function() ToolDropdown:Select(newList[1]) end)
+                elseif type(ToolDropdown.SetValue) == "function" then
+                    pcall(function() ToolDropdown:SetValue(newList[1]) end)
+                end
+            else
+                selectedToolName = nil
+            end
+            print("Tool list refreshed (via ToolDropdown:Refresh) — items:", #newList)
+        else
+            -- Fallback: tạo dropdown mới
+            Tab2:Dropdown({
+                Title = "Select Tool (Players) [Refreshed](ko hoạt động!)",
+                Values = newList,
+                Value = newList[1],
+                Multi = false,
+                AllowNone = true,
+                Callback = function(option)
+                    local chosen = type(option) == "table" and option[1] or option
+                    selectedToolName = (chosen == "(No tools found)") and nil or (chosen ~= "" and chosen or nil)
+                    print("Selected tool:", selectedToolName)
+                end
+            })
+            print("Tool list refreshed (recreated dropdown) — items:", #newList)
+        end
+    end
+})
+
+-- Tạo nút ZXCVBN
+local keys = {"Z","X","C","V","B","N"}
+for _, k in ipairs(keys) do
+    Tab2:Button({
+        Title = "Use Skill " .. k,
+        Desc = "Kích hoạt skill " .. k .. " của tool đã chọn",
+        Locked = false,
+        Callback = (function(key)
+            return function()
+                activateSelectedToolSkill(selectedToolName, key)
+            end
+        end)(k)
+    })
+end
+
+-- ===========================
+-- END OF SCRIPT
+-- ===========================
+
+local Button = Tab4:Button({
+    Title = "level giả",
+    Desc = "chỉ là 1 cái nút",
+    Locked = false,
+    Callback = function()
+local player = game.Players.LocalPlayer
+    local data = player:FindFirstChild("Data")
+    if data then
+        local levels = data:FindFirstChild("Levels")
+        if levels then
+            levels.Value = tonumber(math.huge)
+        end
+    end
+        print("clicked")
+    end
+})
+
+local Button = Tab4:Button({
+    Title = "dupe tiền giả(ko giống như của ai đó🤔)",
+    Desc = "chỉ là 1 cái nút",
+    Locked = false,
+    Callback = function()
+local player = game.Players.LocalPlayer
+    local data = player:FindFirstChild("Data")
+    if data then
+        local belis = data:FindFirstChild("Belis")
+        if belis then
+            belis.Value = tonumber(math.huge)
+        end
+    end
+        print("clicked")
+    end
+})
+
+local Button = Tab1:Button({
+    Title = "buff máu",
+    Desc = "spam mỗi vài giây,chục giây sẽ được buff nhiều máu",
+    Locked = false,
+    Callback = function()
+local Players = game:GetService("Players")
+local armors = {"Cursed-Armor", "Unique-Armor", "Darkness-Armor", "Thunder-Armor", "Thunder-Armor", "Diamond-Armor", "Golden-Armor", "Epic-Armor", "Iron-Armor", "Wooden-Armor"} -- Danh sách các loại giáp
+
+for _, player in pairs(Players:GetPlayers()) do
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        for _, armorName in pairs(armors) do
+            local armor = backpack:FindFirstChild(armorName)
+            if armor and armor:FindFirstChild("K") and armor.K:FindFirstChild("Fire") then
+                armor.K.Fire:FireServer()
+            end
+        end
+    end
+end
+        print("clicked")
+    end
+})
+
+local Button = Tab1:Button({
+    Title = "Random Secret(sea 1)",
+    Desc = "chỉ là 1 cái nút",
+    Locked = false,
+    Callback = function()
+for i = 1, 100000 do
+fireclickdetector(game:GetService("Workspace").MAP["STARTER ISLAND [ Lv 1+ ]"]["Secret Random"].RANDOM)
+end
+        print("clicked")
+    end
+})
+
+local Button = Tab1:Button({
+    Title = "farm tiền(sea 1)",
+    Desc = "chỉ là 1 cái nút",
+    Locked = false,
+    Callback = function()
+for i = 1, 100000 do
+fireclickdetector(workspace.MAP["Event Island"].EventBox.ClickDetector)
+end
+        print("clicked")
+    end
+})
+
+local Toggle = Tab1:Toggle({
+    Title = "fast attack",
+    Desc = "dùng được tất cả kiếm",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value)
+getgenv().auto = value -- Bật/tắt tự động
+
+if not getgenv().auto then
+    game.Players.LocalPlayer.Character.Humanoid:UnequipTools()
+end
+
+spawn(function()
+    while getgenv().auto do
+        wait()
+        if not getgenv().auto then break end
+        pcall(function()
+            for _, c in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
+                if c:IsA("Tool") and c:FindFirstChild("Hitbox") then
+                    c.Parent = game.Players.LocalPlayer.Character
+                end
+            end
+            for _, v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
+                if v:IsA("Tool") and v:FindFirstChild("Hitbox") then
+                    v.Hitbox:FireServer(90, 90, 90)
+                end
+            end
+        end)
+    end
+end)
+    end
+})
+
+-- Cấu hình
+getgenv().G = true
+getgenv().Creator = 'https://discord.gg/B3HqPPzFYr - HalloweenGaster'
+getgenv().KillAura = false
+getgenv().KillRadius = 5
+getgenv().KillDelay = 0.9
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
+if not lp then return end
+
+-- aura
+local aura, auraConn
+local function spawnAura()
+    if aura then return end
+    aura = Instance.new("Part", workspace)
+    aura.Name = "KillAuraBall"
+    aura.Shape = Enum.PartType.Ball
+    aura.Anchored = true
+    aura.CanCollide = false
+    aura.Material = Enum.Material.Neon
+    aura.Transparency = 0.6
+    aura.Size = Vector3.new(getgenv().KillRadius*2, getgenv().KillRadius*2, getgenv().KillRadius*2)
+    auraConn = RunService.RenderStepped:Connect(function()
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if aura and hrp then aura.CFrame = CFrame.new(hrp.Position) end
+    end)
+end
+
+local function despawnAura()
+    if auraConn then auraConn:Disconnect(); auraConn = nil end
+    if aura then pcall(function() aura:Destroy() end); aura = nil end
+end
+
+-- kill loop (giữ logic của bạn)
+spawn(function()
+    while getgenv().G and getgenv().Creator == 'https://discord.gg/B3HqPPzFYr - HalloweenGaster' do
+        wait(getgenv().KillDelay)
+
+        -- mở rộng simulation radius nếu có (bọc pcall)
+        pcall(function()
+            if sethiddenproperty then
+                sethiddenproperty(lp, "SimulationRadius", 1e11)
+                sethiddenproperty(lp, "MaxSimulationRadius", 1e11)
+            end
+        end)
+
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then continue end
+
+        if getgenv().KillAura then
+            spawnAura()
+            -- cập nhật size nếu thay đổi radius
+            if aura then
+                local r = getgenv().KillRadius or 5
+                aura.Size = Vector3.new(r*2, r*2, r*2)
+            end
+
+            local pos = hrp.Position
+            local r2 = (getgenv().KillRadius or 5)^2
+            for _,v in ipairs(workspace:GetDescendants()) do
+                if v:IsA("Humanoid") then
+                    local m = v.Parent
+                    if m and m ~= char and not Players:GetPlayerFromCharacter(m) then
+                        local root = m:FindFirstChild("HumanoidRootPart") or m.PrimaryPart
+                        if root then
+                            local dx = root.Position - pos
+                            if dx.X*dx.X + dx.Y*dx.Y + dx.Z*dx.Z <= r2 then
+                                pcall(function() v.Health = 0 end)
+                            end
+                        end
+                    end
+                end
+            end
+        else
+            despawnAura()
+        end
+    end
+end)
+
+-- UI (Tab1 phải tồn tại)
+local Slider = Tab1:Slider({
+    Title = "kill aura range",
+    Step = 1,
+    Value = { Min = 2, Max = 100, Default = getgenv().KillRadius },
+    Callback = function(v)
+        getgenv().KillRadius = v
+        if aura then aura.Size = Vector3.new(v*2, v*2, v*2) end
+    end
+})
+
+local Toggle = Tab1:Toggle({
+    Title = "kill aura",
+    Default = getgenv().KillAura,
+    Callback = function(state)
+        getgenv().KillAura = state
+        if state then spawnAura() else despawnAura() end
+    end
+})
+
+local Button = Tab3:Button({
+    Title = "teleport raid",
+    Desc = "dịch chuyển đến raid",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(578.97998, 33.2999954, -460.05011, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+        print("clicked")
+    end
+})
+
+local Button = Tab4:Button({
+    Title = "get all tool",
+    Desc = "lấy tất cả item",
+    Locked = false,
+    Callback = function()
+-- Local: clone tools from ReplicatedStorage to local player's Backpack (client-side)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+
+local function gatherTools()
+    local tools = {}
+    for _, inst in ipairs(ReplicatedStorage:GetDescendants()) do
+        if inst:IsA("Tool") then
+            table.insert(tools, inst)
+        end
+    end
+    return tools
+end
+
+local function giveTools()
+    if not player or not player:FindFirstChild("Backpack") then return end
+    for _, t in ipairs(gatherTools()) do
+        if not player.Backpack:FindFirstChild(t.Name) and not (player.Character and player.Character:FindFirstChild(t.Name)) then
+            local ok, cloned = pcall(function() return t:Clone() end)
+            if ok and cloned then cloned.Parent = player.Backpack end
+        end
+    end
+end
+
+-- Chạy lần đầu và lắng nghe khi có tool mới
+giveTools()
+ReplicatedStorage.ChildAdded:Connect(function(child)
+    task.delay(0.05, function()
+        if child:IsA("Tool") then
+            giveTools()
+        else
+            -- nếu folder mới chứa tools
+            for _, d in ipairs(child:GetDescendants()) do
+                if d:IsA("Tool") then
+                    giveTools()
+                    break
+                end
+            end
+        end
+    end)
+end)
+        print("clicked")
+    end
+})
+
+local Toggle = Tab2:Toggle({
+    Title = "auto dùng skill Z",
+    Desc = "",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value) 
+-- Bật/tắt auto
+getgenv().AutoFire = value  -- Đổi thành false để dừng
+
+task.spawn(function()
+    while getgenv().AutoFire do
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local tool = char:FindFirstChildOfClass("Tool")
+
+        if tool then
+            local zPart = tool:FindFirstChild("Z")
+            if zPart then
+                local fireEvent = zPart:FindFirstChild("Fire")
+                if fireEvent then
+                    fireEvent:FireServer()
+                end
+            end
+        end
+        
+        task.wait(0.1) -- Delay 0.1s
+    end
+end)
+    end
+})
+
+local Toggle = Tab2:Toggle({
+    Title = "auto dùng skill X",
+    Desc = "",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value) 
+-- Bật/tắt auto
+getgenv().AutoFire = value  -- Đổi thành false để dừng
+
+task.spawn(function()
+    while getgenv().AutoFire do
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local tool = char:FindFirstChildOfClass("Tool")
+
+        if tool then
+            local zPart = tool:FindFirstChild("X")
+            if zPart then
+                local fireEvent = zPart:FindFirstChild("Fire")
+                if fireEvent then
+                    fireEvent:FireServer()
+                end
+            end
+        end
+        
+        task.wait(0.1) -- Delay 0.1s
+    end
+end)
+    end
+})
+
+local Toggle = Tab2:Toggle({
+    Title = "auto dùng skill C",
+    Desc = "",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value) 
+-- Bật/tắt auto
+getgenv().AutoFire = value  -- Đổi thành false để dừng
+
+task.spawn(function()
+    while getgenv().AutoFire do
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local tool = char:FindFirstChildOfClass("Tool")
+
+        if tool then
+            local zPart = tool:FindFirstChild("C")
+            if zPart then
+                local fireEvent = zPart:FindFirstChild("Fire")
+                if fireEvent then
+                    fireEvent:FireServer()
+                end
+            end
+        end
+        
+        task.wait(0.1) -- Delay 0.1s
+    end
+end)
+    end
+})
+
+local Toggle = Tab2:Toggle({
+    Title = "auto dùng skill V",
+    Desc = "",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value) 
+-- Bật/tắt auto
+getgenv().AutoFire = value  -- Đổi thành false để dừng
+
+task.spawn(function()
+    while getgenv().AutoFire do
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local tool = char:FindFirstChildOfClass("Tool")
+
+        if tool then
+            local zPart = tool:FindFirstChild("V")
+            if zPart then
+                local fireEvent = zPart:FindFirstChild("Fire")
+                if fireEvent then
+                    fireEvent:FireServer()
+                end
+            end
+        end
+        
+        task.wait(0.1) -- Delay 0.1s
+    end
+end)
+    end
+})
+
+local Toggle = Tab2:Toggle({
+    Title = "auto dùng skill B",
+    Desc = "",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value) 
+-- Bật/tắt auto
+getgenv().AutoFire = value  -- Đổi thành false để dừng
+
+task.spawn(function()
+    while getgenv().AutoFire do
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local tool = char:FindFirstChildOfClass("Tool")
+
+        if tool then
+            local zPart = tool:FindFirstChild("B")
+            if zPart then
+                local fireEvent = zPart:FindFirstChild("Fire")
+                if fireEvent then
+                    fireEvent:FireServer()
+                end
+            end
+        end
+        
+        task.wait(0.1) -- Delay 0.1s
+    end
+end)
+    end
+})
+
+
+local Toggle = Tab2:Toggle({
+    Title = "auto dùng skill N",
+    Desc = "",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(value) 
+-- Bật/tắt auto
+getgenv().AutoFire = value  -- Đổi thành false để dừng
+
+task.spawn(function()
+    while getgenv().AutoFire do
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        local char = player.Character or player.CharacterAdded:Wait()
+        local tool = char:FindFirstChildOfClass("Tool")
+
+        if tool then
+            local zPart = tool:FindFirstChild("N")
+            if zPart then
+                local fireEvent = zPart:FindFirstChild("Fire")
+                if fireEvent then
+                    fireEvent:FireServer()
+                end
+            end
+        end
+        
+        task.wait(0.1) -- Delay 0.1s
+    end
+end)
+    end
+})
+
+local Button = Tab5:Button({
+    Title = "bật tắt pvp",
+    Desc = "ko cần đợi 60s",
+    Locked = false,
+    Callback = function()
+game:GetService("ReplicatedStorage"):WaitForChild("PVPRemotes"):WaitForChild("Active"):InvokeServer()
+        print("clicked")
+    end
+})
+
+local Button = Tab6:Button({
+    Title = "đảo bắt đầu",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(465.6050720214844, 41.61215591430664, -527.8148193359375)
+        print("clicked")
+    end
+})
+
+local Button = Tab6:Button({
+    Title = "đảo tuyết",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-912.7583618164062, 28.103044509887695, 250.83282470703125)
+        print("clicked")
+    end
+})
+
+local Button = Tab6:Button({
+    Title = "đảo sa mạc",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-578.7059936523438, 38.2536735534668, 1510.4837646484375)
+        print("clicked")
+    end
+})
+
+local Button = Tab6:Button({
+    Title = "đảo trời",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-4590.5888671875, 4328.68896484375, 165.373291015625)
+        print("clicked")
+    end
+})
+
+local Button = Tab6:Button({
+    Title = "đảo end",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-2223.915283203125, 35.840484619140625, 1965.87744140625)
+        print("clicked")
+    end
+})
+
+local Button = Tab6:Button({
+    Title = "đảo minh mama",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(2570.048828125, 50.606231689453125, -65.366455078125)
+        print("clicked")
+    end
+})
+
+local Button = Tab6:Button({
+    Title = "đảo dark",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-3465.802978515625, 65.7531509399414, 3718.08056640625)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo kaido",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-683.979248046875, 87684.9609375, 789.7413330078125)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo platinum",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-1258.6632080078125, 87691.7890625, 3259.80224609375)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo hải quân",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-152.8121337890625, 87739.171875, -2122.2275390625)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo nickbeo",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-1601.2347412109375, 87697.03125, 637.100830078125)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo garou",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1541.723388671875, 87694.5390625, 954.6348266601562)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo sukuna",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1471.643798828125, 87686.875, 2764.609619140625)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo grab",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(2025.84423828125, 87694.8671875, -47.150875091552734)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo cid",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1482.3511962890625, 87705.9296875, -1144.9952392578125)
+        print("clicked")
+    end
+})
+
+local Button = Tab7:Button({
+    Title = "đảo mặt trời",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1693.6846923828125, 87714.59375, -2305.720458984375)
+        print("clicked")
+    end
+})
+
+-- Button: TP sang Sea 2
+local Button = Tab8:Button({
+    Title = "TP sang Sea 2",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local player = game.Players.LocalPlayer
+
+        local secondSeaID = 7258239416
+        TeleportService:Teleport(secondSeaID, player)
+
+        print("Đã chuyển sang Sea 2")
+    end
+})
+
+-- Button: TP sang Raid Mode
+local Button2 = Tab8:Button({
+    Title = "TP sang Raid Mode",
+    Desc = "",
+    Locked = false,
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local player = game.Players.LocalPlayer
+
+        local raidModeID = 18859789310
+        TeleportService:Teleport(raidModeID, player)
+
+        print("Đã chuyển sang Raid Mode")
+    end
+})
+
+local Toggle = Tab4:Toggle({
+    Title = "Esp",
+    Desc = "định vị player",
+    Icon = "bird",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(Value)
+getgenv().FlaggingESP = Value
+
+    local function ApplyESP(v)
+        if v.Character and v.Character:FindFirstChildOfClass('Humanoid') then
+            v.Character.Humanoid.NameDisplayDistance = getgenv().FlaggingESP and 9e9 or 50
+            v.Character.Humanoid.NameOcclusion = getgenv().FlaggingESP and "NoOcclusion" or "OccludeAll"
+            v.Character.Humanoid.HealthDisplayDistance = getgenv().FlaggingESP and 9e9 or 50
+            v.Character.Humanoid.HealthDisplayType = getgenv().FlaggingESP and "AlwaysOn" or "Never"
+            v.Character.Humanoid.Health = v.Character.Humanoid.Health
+        end
+    end
+
+    for i, v in pairs(game.Players:GetPlayers()) do
+        ApplyESP(v)
+    end
+
+    game.Players.PlayerAdded:Connect(function(v)
+        ApplyESP(v)
+        v.CharacterAdded:Connect(function()
+            task.wait(0.33)
+            ApplyESP(v)
+        end)
+    end)
+    end
+})
+
+-- Biến lưu giá trị số lần kích hoạt từ Slider
+local soLanKichHoat = 50 -- mặc định
+
+-- Slider điều chỉnh số lần kích hoạt (Tab4)
+local Slider = Tab4:Slider({
+    Title = "Số lần kích hoạt",
+    Step = 1, -- bước nhảy
+    Value = {
+        Min = 50,
+        Max = 1000,
+        Default = soLanKichHoat,
+    },
+    Callback = function(value)
+        soLanKichHoat = value
+        print("Số lần hiện tại:", soLanKichHoat)
+    end
+})
+
+-- Nút bấm để thực hiện script (Tab4)
+local Button = Tab4:Button({
+    Title = "Kích hoạt",
+    Desc = "Chạy script theo số lần đã chọn",
+    Locked = false,
+    Callback = function()
+        print("Bắt đầu kích hoạt", soLanKichHoat, "lần...")
+        for i = 1, soLanKichHoat do
+            workspace.MAP["STARTER ISLAND [ Lv 1+ ]"]
+                :GetChildren()[5]["Real Triple Katana"].Z.Fire:FireServer()
+        end
+        print("Hoàn tất!")
+    end
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local targetName = "" -- Lưu tên player nhập vào
+local isFarming = false -- Trạng thái toggle
+
+-- Ô nhập tên player
+local Input = Tab5:Input({
+    Title = "Target Player",
+    Desc = "Nhập tên player cần bắn Hitbox",
+    Value = "",
+    Placeholder = "Enter player name...",
+    Callback = function(input) 
+        targetName = input
+        print("Đã đặt target: " .. targetName)
+    end
+})
+
+-- Nút bật/tắt
+local Toggle = Tab5:Toggle({
+    Title = "Auto Hitbox",
+    Desc = "Bật để liên tục kích hoạt Hitbox",
+    Default = false,
+    Callback = function(state) 
+        isFarming = state
+        print("Auto Hitbox: " .. tostring(isFarming))
+    end
+})
+
+-- Vòng lặp liên tục
+task.spawn(function()
+    while task.wait(1) do -- mỗi 1 giây
+        if isFarming and targetName ~= "" then
+            local player = Players:FindFirstChild(targetName)
+            if player then
+                local eventsFolder = player:FindFirstChild("Events") or player
+                for _, obj in ipairs(eventsFolder:GetDescendants()) do
+                    if obj:IsA("RemoteEvent") and obj.Name == "Hitbox" then
+                        obj:FireServer()
+                        print("Đã kích hoạt Hitbox:", obj:GetFullName())
+                    end
+                end
+            else
+                warn("Không tìm thấy player: " .. targetName)
+            end
+        end
+    end
+end)
+
+local player = game.Players.LocalPlayer
+
+-- Tạo GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "CircleButtonGui"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Nút ảnh tròn
+local button = Instance.new("ImageButton")
+button.Name = "CircleButton"
+button.Size = UDim2.new(0, 60, 0, 60)
+button.Position = UDim2.new(0, 100, 0, 100)
+button.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Màu nền đen
+button.Image = "rbxassetid://116721573962136" -- Thay ID nếu muốn
+button.BackgroundTransparency = 0
+button.AutoButtonColor = false
+button.Active = true
+button.Parent = gui
+
+-- Bo tròn nút
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0.5, 0)
+corner.Parent = button
+
+-- Thêm viền xanh dương bên ngoài
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(0, 120, 255) -- Xanh dương
+stroke.Thickness = 2
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+stroke.Parent = button
+
+-- Kéo nút
+local dragging = false
+local dragInput, mouseStartPos, elementStartPos
+
+button.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		mouseStartPos = input.Position
+		elementStartPos = button.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+button.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - mouseStartPos
+		button.Position = UDim2.new(
+			elementStartPos.X.Scale, elementStartPos.X.Offset + delta.X,
+			elementStartPos.Y.Scale, elementStartPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- Click để kích hoạt chức năng
+local isWindowOpen = false
+
+button.MouseButton1Click:Connect(function()
+	isWindowOpen = not isWindowOpen
+	if isWindowOpen then
+		if Window and Window.Open then
+			Window:Open()
+		end
+	else
+		if Window and Window.Close then
+			Window:Close()
+		end
+	end
+end)

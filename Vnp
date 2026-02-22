@@ -1,0 +1,308 @@
+--[[ 
+    TANK HUB V8.0 - ZERO PING FLOOD EDITION
+    Environment: Delta Executor (High UNC)
+    Fixes: 
+    1. Removed Heartbeat Spam. Replaced with Dynamic Timer Loop (Adjusts task.wait based on Ping).
+    2. Skill Spam rate-limited to prevent RemoteEvent Flooding.
+    Included: V16 Core, Gray Hitbox, Inf Money, Full Arsenal.
+    Developer: fast and furious
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Stats = game:GetService("Stats")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local LP = Players.LocalPlayer
+
+-- Hàm an toàn cho Delta
+local UIContainer = pcall(function() return gethui() end) and gethui() or CoreGui
+
+-- =========================================================
+-- 1️⃣ INTRO TANK
+-- =========================================================
+if not _G.IntroShown then
+    _G.IntroShown = true
+    pcall(function()
+        local screenGui = Instance.new("ScreenGui", UIContainer); screenGui.Name = "TankRainbowIntro"; screenGui.IgnoreGuiInset = true
+        local blackFrame = Instance.new("Frame", screenGui); blackFrame.BackgroundColor3 = Color3.new(0, 0, 0); blackFrame.Size = UDim2.new(1, 0, 1, 0)
+        local textLabel = Instance.new("TextLabel", blackFrame); textLabel.Size = UDim2.new(1, 0, 1, 0); textLabel.BackgroundTransparency = 1
+        textLabel.TextColor3 = Color3.new(1, 1, 1); textLabel.Font = Enum.Font.Code; textLabel.TextScaled = true
+        textLabel.Text = "[ TANK HUB V8.0 ]\nĐANG XÓA BỎ NGHẼN BĂNG THÔNG..."
+        
+        local gradient = Instance.new("UIGradient", textLabel)
+        gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.16, Color3.fromRGB(255, 127, 0)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 255, 0)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 0)), ColorSequenceKeypoint.new(0.66, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(0.83, Color3.fromRGB(75, 0, 130)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(148, 0, 211))})
+        
+        local introRunning = true
+        task.spawn(function() local rot = 0; while introRunning and screenGui.Parent do rot = rot + 2; if rot >= 360 then rot = 0 end; gradient.Rotation = rot; task.wait(0.01) end end)
+        task.wait(2.5); TweenService:Create(blackFrame, TweenInfo.new(1), {BackgroundTransparency = 1}):Play(); TweenService:Create(textLabel, TweenInfo.new(1), {TextTransparency = 1}):Play()
+        task.wait(1.5); introRunning = false; screenGui:Destroy()
+    end)
+end
+
+-- =========================================================
+-- 2️⃣ CẤU HÌNH & DATABASE CHUẨN
+-- =========================================================
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Rayfield:CreateWindow({
+   Name = "TANK HUB V8.0 | ZERO PING FLOOD",
+   LoadingTitle = "Applying Dynamic Timers...",
+   ToggleUIKeybind = "K",
+   ConfigurationSaving = {Enabled = true, FileName = "TankHub_V8"}
+})
+
+local Config = {
+    -- Auto Farm
+    AutoFarm = false, AutoProgression = false, SeaSelect = "Sea 1", SelectedFarmNode = "[Lv 1] Boss", AutoEquip = true, DistanceOffset = 5,
+    -- Combat (Hitbox & Skills)
+    AutoSkills = false, UseVIMSkills = false, HitboxExpander = false, HitboxSize = 30,
+    -- Core Buff
+    BuffEnabled = false, BuffMult = 15, BypassPing = false, CurrentOutput = 0, CurrentDelay = 0.1,
+    -- Misc & Physics
+    AuraOn = false, AuraRange = 150, MagnetAura = false, ShowRange = false,
+    GodMode = false, RetreatHP = 20, IsRetreating = false, AutoStats = false, StatSelect = "Melee", StatAmount = 1,
+    WalkSpeed = 16, JumpPower = 50, SpeedMod = false, JumpMod = false, Noclip = false, InfJump = false,
+    ESP = false, PotatoPC = false, AntiAFK = true, AutoRejoin = true
+}
+
+local Sea1Bosses = {{"[Lv 1] Boss", 1, "Boss", "Quest1"}, {"[Lv 50] SnowBoss", 50, "SnowBoss", "Quest2"}, {"[Lv 100] Sand", 100, "Sand", "Quest3"}, {"[Lv 250] Enel", 250, "Enel", "Quest4"}, {"[Lv 550] Ace", 550, "Ace", "Quest5"}, {"[Lv 900] Minmama", 900, "Minmama", "Quest6"}, {"[Lv 1350] Dark", 1350, "Dark", "Quest7"}}
+local Sea2Bosses = {{"[Lv 2000] Paw", 2000, "Paw", "Quest1"}, {"[Lv 4000] Magma Admiral", 4000, "Magma Admiral", "Quest2"}, {"[Lv 8000] Nickbeo", 8000, "Nickbeo", "Quest3"}, {"[Lv 16000] Tango", 16000, "Tango", "Quest4"}, {"[Lv 20000] Garou", 20000, "Garou", "Quest5"}, {"[Lv 50000] Sukuna", 50000, "Sukuna", "Quest6"}, {"[Lv 100000] Grab", 100000, "Grab", "Quest7"}, {"[Lv 500000] Pride", 500000, "Pride", "Quest9"}}
+local function GetNames(tbl) local t={}; for _,v in ipairs(tbl) do table.insert(t,v[1]) end return t end
+local Sea1Names, Sea2Names = GetNames(Sea1Bosses), GetNames(Sea2Bosses)
+local function GetBossInfo(n) for _,v in ipairs(Sea1Bosses) do if v[1]==n then return {Boss=v[3], Quest=v[4]} end end for _,v in ipairs(Sea2Bosses) do if v[1]==n then return {Boss=v[3], Quest=v[4]} end end return nil end
+
+-- =========================================================
+-- 3️⃣ GIAO DIỆN CHỨC NĂNG
+-- =========================================================
+local MainTab = Window:CreateTab("Auto Farm Boss", 4483345998)
+local CombatTab = Window:CreateTab("Skill & Hitbox", 4483345998)
+local BuffTab = Window:CreateTab("🚀 LÕI BUFF (FIX PING)", 4483345998)
+local CheatTab = Window:CreateTab("Hack Tiền Glitch", 4483345998)
+local AuraTab = Window:CreateTab("Aura & Visual", 4483345998)
+local PlayerTab = Window:CreateTab("Soi Người Chơi", 4483345998) 
+local GodTab = Window:CreateTab("Bảo Vệ & Chỉ Số", 4483345998)
+local VisualTab = Window:CreateTab("ESP & Tối Ưu PC", 4483345998)
+local MonitorTab = Window:CreateTab("Giám Sát Hệ Thống", 4483345998) 
+
+-- --- TAB: LÕI BUFF FIX PING ---
+BuffTab:CreateSection("⚡ LÕI ĐẠN ĐỘ (ZERO FLOOD ENGINE)")
+BuffTab:CreateParagraph({Title="Công Nghệ Chống Ping Mới", Content="Đã gỡ khỏi Heartbeat. Lõi giờ tự động dãn cách thời gian bắn (0.1s -> 1.0s) dựa theo Ping để Server kịp xả lag."})
+local ArmorCache = {}
+local armors = {"Cursed-Armor", "Unique-Armor", "Darkness-Armor", "Thunder-Armor", "Diamond-Armor", "Golden-Armor", "Epic-Armor", "Iron-Armor", "Wooden-Armor", "Godly-Armor"}
+
+BuffTab:CreateToggle({ Name="🚀 KÍCH HOẠT LÕI ĐỘ", CurrentValue=false, Callback=function(v) Config.BuffEnabled=v end})
+BuffTab:CreateSlider({ Name="Mức Chân Ga (Sức mạnh)", Range={1,100}, Increment=5, CurrentValue=20, Callback=function(v) Config.BuffMult=v end})
+BuffTab:CreateToggle({ Name="⚠️ Cắt Phanh ABS (Ép Xả Bất Chấp Ping)", CurrentValue=false, Callback=function(v) Config.BypassPing=v end})
+
+local CurrentPowerLabel = BuffTab:CreateLabel("🔥 Lượng Đạn Thực Tế: 0")
+local CurrentDelayLabel = BuffTab:CreateLabel("⏳ Tốc Độ Vòng Lặp: 0s")
+
+-- --- TAB: GIÁM SÁT HỆ THỐNG ---
+MonitorTab:CreateSection("🛰️ Radar Băng Thông Máy Chủ")
+local LPing = MonitorTab:CreateLabel("📶 Ping: Đang đo...")
+local LFPS = MonitorTab:CreateLabel("🖥️ FPS: Đang đo...")
+local LThrot = MonitorTab:CreateLabel("⚙️ Trạng Thái: Bình Thường")
+
+local sec, frames, fps = os.clock(), 0, 60
+RunService.RenderStepped:Connect(function() frames = frames + 1; if os.clock() - sec >= 1 then fps = frames; frames = 0; sec = os.clock() end end)
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            local pingItem = Stats.Network.ServerStatsItem:FindFirstChild("Data Ping")
+            local p = pingItem and pingItem:GetValue() or 50 
+            LPing:Set("📶 Ping Server: " .. (p > 250 and "🔴 " or (p > 100 and "🟡 " or "🟢 ")) .. math.floor(p) .. " ms")
+            LFPS:Set("🖥️ FPS Engine: " .. tostring(fps) .. " fps")
+            
+            if Config.BuffEnabled then
+                if Config.BypassPing then LThrot:Set("⚙️ Trạng Thái: 🔥 ÉP XẢ MAX (Nguy Hiểm)")
+                elseif p > 400 then LThrot:Set("⚙️ Trạng Thái: 🔴 BÓP CỨNG (Nghỉ 1 giây)")
+                elseif p > 150 then LThrot:Set("⚙️ Trạng Thái: 🟡 TRẢ SỐ (Nghỉ 0.5 giây)")
+                else LThrot:Set("⚙️ Trạng Thái: 🟢 MƯỢT MÀ (Xả liên thanh)") end
+                
+                CurrentPowerLabel:Set("🔥 Lượng Đạn Thực Tế: " .. tostring(Config.CurrentOutput))
+                CurrentDelayLabel:Set("⏳ Tốc Độ Vòng Lặp: " .. tostring(Config.CurrentDelay) .. " giây")
+            else
+                LThrot:Set("⚙️ Trạng Thái: Đang Tắt Hệ Thống")
+                CurrentPowerLabel:Set("🔥 Lượng Đạn Thực Tế: 0")
+                CurrentDelayLabel:Set("⏳ Tốc Độ Vòng Lặp: 0s")
+            end
+        end)
+    end
+end)
+
+-- --- TAB: AUTO FARM & CHUYỂN BOSS ---
+MainTab:CreateToggle({ Name = "🧠 Tự Động Chuyển Boss Theo Level", CurrentValue = false, Callback = function(v) Config.AutoProgression = v end })
+local BossDropdown = MainTab:CreateDropdown({ Name = "🎯 Chọn Boss Thủ Công", Options = Sea1Names, CurrentOption = {Sea1Names[1]}, Callback = function(v) Config.SelectedFarmNode = v[1] end })
+MainTab:CreateDropdown({ Name = "📍 Chọn Sea", Options = {"Sea 1","Sea 2"}, CurrentOption = {"Sea 1"}, Callback = function(v) Config.SeaSelect = v[1]; task.defer(function() if BossDropdown then if Config.SeaSelect == "Sea 1" then BossDropdown:Refresh(Sea1Names, true) else BossDropdown:Refresh(Sea2Names, true) end end end) end })
+MainTab:CreateToggle({ Name = "⚔️ BẬT AUTO FARM", CurrentValue = false, Callback = function(v) Config.AutoFarm = v end })
+MainTab:CreateToggle({ Name = "🗡️ Auto Equip Vũ Khí", CurrentValue = true, Callback = function(v) Config.AutoEquip = v end })
+MainTab:CreateSlider({ Name = "Khoảng Cách Đứng", Range = {0, 50}, Increment = 1, CurrentValue = 5, Callback = function(v) Config.DistanceOffset = v end })
+
+-- --- TAB: HACK TIỀN ---
+CheatTab:CreateSection("💰 Mua Đồ Giá Âm (Bơm Tiền Tỷ)")
+CheatTab:CreateButton({ Name = "💸 1 CLICK BƠM TIỀN TỶ (INF MONEY)", Callback = function() pcall(function() local args = {{false, {Legendary=true, Common=true, Rare=true, Mythical=true, Secret=false}, -10000000000}}; LP:WaitForChild("PlayerGui"):WaitForChild("Random"):WaitForChild("Bright"):FireServer(unpack(args)); pcall(function() LP.Data.Belis.Value = 999999999999 end) end) end })
+
+-- --- TAB: KỸ NĂNG VÀ HITBOX ---
+CombatTab:CreateToggle({ Name = "Tự Động Xả Kỹ Năng Kèm Tọa Độ", CurrentValue = false, Callback = function(v) Config.AutoSkills = v end })
+CombatTab:CreateToggle({ Name = "Dùng Phím Ảo (Z X C V B) Dự Phòng", CurrentValue = false, Callback = function(v) Config.UseVIMSkills = v end })
+CombatTab:CreateSection("🧊 Hitbox Xám Nhạt (Delta Locked 60FPS)")
+CombatTab:CreateToggle({ Name = "Kích Hoạt Hitbox Box Xám Quái/Người", CurrentValue = false, Callback = function(v) Config.HitboxExpander = v end })
+CombatTab:CreateSlider({ Name = "Kích Thước Hitbox", Range = {5, 100}, Increment = 5, CurrentValue = 30, Callback = function(v) Config.HitboxSize = v end })
+
+-- --- TAB: SOI NGƯỜI CHƠI ---
+PlayerTab:CreateSection("🔍 Xem Trộm Túi Đồ Toàn Server")
+local TargetPlayer = ""; local playerList = {}; for _, p in ipairs(Players:GetPlayers()) do table.insert(playerList, p.Name) end
+local PlayerDropdown = PlayerTab:CreateDropdown({Name = "Chọn Mục Tiêu", Options = playerList, CurrentOption = {playerList[1]}, Callback = function(v) TargetPlayer = v[1] end})
+PlayerTab:CreateButton({Name = "🔄 Làm Mới Danh Sách", Callback = function() local newNames = {}; for _, p in ipairs(Players:GetPlayers()) do table.insert(newNames, p.Name) end PlayerDropdown:Refresh(newNames, true) end})
+local InvLabel = PlayerTab:CreateParagraph({Title="Kết Quả Quét", Content="Chưa quét..."})
+PlayerTab:CreateButton({ Name = "👁️ Quét Túi Đồ Ngay", Callback = function() local p = Players:FindFirstChild(TargetPlayer); if p then local inv = {}; if p.Character then for _, t in ipairs(p.Character:GetChildren()) do if t:IsA("Tool") then table.insert(inv, "🔥 [Đang Cầm]: " .. t.Name) end end end; local bp = p:FindFirstChild("Backpack"); if bp then for _, t in ipairs(bp:GetChildren()) do if t:IsA("Tool") then table.insert(inv, "🎒 " .. t.Name) end end end; if #inv > 0 then InvLabel:Set({Title="Kho Đồ của " .. p.Name, Content=table.concat(inv, "\n")}) else InvLabel:Set({Title="Kho Đồ của " .. p.Name, Content="Trống rỗng!"}) end else InvLabel:Set({Title="Lỗi", Content="Người chơi đã thoát!"}) end end })
+
+-- --- CÁC TAB CÒN LẠI ---
+AuraTab:CreateToggle({ Name="Hiện Vòng Tròn Phạm Vi (Neon Rainbow)", CurrentValue=false, Callback=function(v) Config.ShowRange=v end})
+AuraTab:CreateToggle({ Name="Bật Lực Hút Magnet", CurrentValue=false, Callback=function(v) Config.MagnetAura=v end})
+AuraTab:CreateSlider({ Name="Bán Kính Quét & Hút", Range={10,5000}, Increment=50, CurrentValue=150, Callback=function(v) Config.AuraRange=v end})
+
+GodTab:CreateToggle({ Name="Bật God Mode (Trốn Lên Trời Khi Yếu Máu)", CurrentValue=false, Callback=function(v) Config.GodMode=v end})
+GodTab:CreateSlider({ Name="Ngưỡng Báo Động (% Máu)", Range={5, 90}, Increment=5, CurrentValue=20, Callback=function(v) Config.RetreatHP=v end})
+
+VisualTab:CreateToggle({ Name="Bật ESP Player & Boss", CurrentValue=false, Callback=function(v) Config.ESP=v end})
+VisualTab:CreateToggle({ Name="Chế Độ Potato (Đồ Họa Đất Sét)", CurrentValue=false, Callback=function(v) Config.PotatoPC = v; pcall(function() if v then for _, obj in ipairs(Workspace:GetDescendants()) do if obj:IsA("BasePart") then obj.Material = Enum.Material.SmoothPlastic; obj.Reflectance = 0 end end Lighting.GlobalShadows = false end end) end})
+
+
+-- =========================================================
+-- 🔥 ENGINE 1: LÕI BUFF (ĐÃ TÁCH KHỎI HEARTBEAT ĐỂ CHỐNG PING)
+-- =========================================================
+-- Quét tìm vũ khí liên tục
+task.spawn(function()
+    while task.wait(1.5) do 
+        pcall(function() 
+            if Config.BuffEnabled then 
+                local t={} 
+                for _,p in ipairs(Players:GetPlayers()) do 
+                    for _,c in ipairs({p.Character,p:FindFirstChild("Backpack")}) do 
+                        if c then 
+                            for _,n in ipairs(armors) do 
+                                local i=c:FindFirstChild(n); local f=i and i:FindFirstChild("K") and i.K:FindFirstChild("Fire")
+                                if f then table.insert(t,f) end 
+                            end 
+                        end 
+                    end 
+                end 
+                ArmorCache=t 
+            end 
+        end) 
+    end
+end)
+
+-- Vòng Lặp Xả Đạn (Dynamic Timer - Lõi Chống Ping Tuyệt Đối)
+task.spawn(function()
+    while true do
+        local delayTime = 0.1 -- Base Delay (10 lần/giây)
+        
+        if Config.BuffEnabled and #ArmorCache > 0 then
+            pcall(function()
+                local pingItem = Stats.Network.ServerStatsItem:FindFirstChild("Data Ping")
+                local ping = pingItem and pingItem:GetValue() or 50 
+                local targetMult = Config.BuffMult
+                
+                -- Phanh Động Cơ Kép (Giảm đạn & Tăng thời gian chờ)
+                if not Config.BypassPing then
+                    if ping > 400 then 
+                        targetMult = math.floor(Config.BuffMult / 5) 
+                        delayTime = 1.0 -- Lag quá thì 1 giây mới cho bắn 1 lần
+                    elseif ping > 150 then
+                        targetMult = math.floor(Config.BuffMult / 2) 
+                        delayTime = 0.4 -- Hơi lag thì 0.4 giây bắn 1 lần
+                    end
+                end
+                
+                if targetMult < 1 then targetMult = 1 end
+                Config.CurrentOutput = targetMult
+                Config.CurrentDelay = delayTime
+                
+                -- Bắn Đạn Bằng Thread Riêng Của Delta
+                for _, r in ipairs(ArmorCache) do 
+                    task.spawn(function()
+                        for i = 1, targetMult do 
+                            pcall(function() r:FireServer() end) 
+                        end
+                    end)
+                end
+            end)
+        end
+        
+        -- Dùng Delay Động Để Tránh Chặn Server
+        task.wait(delayTime)
+    end
+end)
+
+-- =========================================================
+-- 🔥 ENGINE 2: HITBOX XÁM NHẠT (DELTA RENDERSTEPPED)
+-- =========================================================
+RunService.RenderStepped:Connect(function()
+    if Config.HitboxExpander then
+        pcall(function()
+            local dmgFolder = Workspace:FindFirstChild("NPC DAMAGE")
+            if dmgFolder then
+                for _, mob in ipairs(dmgFolder:GetChildren()) do
+                    local hrp = mob:FindFirstChild("HumanoidRootPart")
+                    if hrp and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                        hrp.Size = Vector3.new(Config.HitboxSize, Config.HitboxSize, Config.HitboxSize)
+                        hrp.Color = Color3.fromRGB(180, 180, 180)
+                        hrp.Transparency = 0.5
+                        hrp.Material = Enum.Material.SmoothPlastic
+                        hrp.CanCollide = false
+                    end
+                end
+            end
+            for _,p in ipairs(Players:GetPlayers()) do 
+                if p~=LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then 
+                    p.Character.HumanoidRootPart.Size = Vector3.new(Config.HitboxSize, Config.HitboxSize, Config.HitboxSize)
+                    p.Character.HumanoidRootPart.Color = Color3.fromRGB(180, 180, 180)
+                    p.Character.HumanoidRootPart.Transparency = 0.5 
+                    p.Character.HumanoidRootPart.Material = Enum.Material.SmoothPlastic
+                    p.Character.HumanoidRootPart.CanCollide = false
+                end 
+            end
+        end)
+    end
+end)
+
+-- =========================================================
+-- 🔥 ENGINE 3: AUTO FARM & SKILL (CHỐNG SPAM REMOTE)
+-- =========================================================
+local lastQuestTime = 0
+local lastSkillTime = 0
+
+task.spawn(function()
+    while task.wait(0.2) do
+        pcall(function()
+            if Config.AutoFarm and Config.SelectedFarmNode ~= "" and not Config.IsRetreating then
+                local info = GetBossInfo(Config.SelectedFarmNode)
+                if info then
+                    if Config.AutoEquip and LP.Character and not LP.Character:FindFirstChildOfClass("Tool") then 
+                        local tool = LP.Backpack:FindFirstChildOfClass("Tool"); if tool then LP.Character.Humanoid:EquipTool(tool) end 
+                    end
+                    
+                    if tick() - lastQuestTime > 3 then
+                        local q = Workspace.NPCS:FindFirstChild(info.Quest)
+                        if q and q:FindFirstChild("ClickPart") then 
+                            for _, b in ipairs({"Accept1", "Accept2", "Accept3", "Accept4"}) do 
+                                local btn = q.ClickPart.QuestTake.QuestTake:FindFirstChild(b)
+                                if btn and btn:FindFirstChild("RemoteEvent") then btn.RemoteEvent:FireServer() end 
+                            end 
+                            lastQuestTime = tick() 
+                        end
+                    end
+                    
+                    local b = Workspace:FindFirstChild("NPC DAMAGE") and Workspace["NPC DAMAGE"]:FindFirstChild(info.Boss)
+                    if b and b:FindFirstChild("HumanoidRootPart") and LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+                        local bossPos = b.HumanoidRootPart.Position
+                        local bossCFrame = b.HumanoidRootPart.CFrame
+                        LP.Character.HumanoidRootPart.CFrame = bossCFrame * CFrame.new(0, 0, Config.DistanceOffset)
+                        
+                        -- GIỚI HẠN SPAM SKILL (Chỉ cho phép tung chiêu m
